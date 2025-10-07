@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>حاسبة مداقش - مع تاج المتصدر</title>
+<style>
+
+
+
+/* منع تأثير التحديد الأزرق عند السحب أو النقر */
+* {
+  user-select: none;       /* يمنع تحديد النصوص */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* نمنع السحب والتحريك */
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    touch-action: none;
+    background: #121212;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    direction: rtl;
+  }
+
+  /* واجهة عامة */
+  .wrap {
+    width: 100%;
+    height: 100%;
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    box-sizing: border-box;
+  }
+
+  h2 {
+    margin-top: 2vh;
+    font-size: 3.5vw;
+  }
+
+  .top-box {
+    margin-top: 1.8vh;
+    position: relative;
+    width: 100%;
+    display:flex;
+    flex-direction: column;
+    align-items:center;
+  }
+
+  /* خانة أعلى سومه */
+  #maxBid {
+    width: 46vw;
+    max-width: 360px;
+    padding: 0.7vh;
+    font-size: 3.2vw;
+    background: #1f1f1f;
+    color: #fff;
+    border: 2px solid #007bff;
+    border-radius: 12px;
+    text-align: center;
+  }
+
+  .info {
+    position: relative;
+    top: 40vh; /* تم وضعه منخفض كما طلبت */
+    font-weight: bold;
+    color: #4fc3f7;
+    font-size: 3vw;
+    text-align: center;
+  }
+
+  .container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5vw;
+    justify-items: center;
+    width: 93vw;
+    max-width: 1000px;
+    margin-top: 2.5vh;
+  }
+
+  .player {
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+
+  .circle {
+    width: 30vw;
+    height: 30vw;
+    max-width: 220px;
+    max-height: 220px;
+    border-radius: 50%;
+    border: 0.5vw solid #ffffff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#1f1f1f;
+    margin-bottom: 1.2vh;
+    font-size: 5.5vw;
+    font-weight: bold;
+    color:#ffffff;
+    user-select: none;
+  }
+
+  /* اسماء قصيرة */
+  input.nameInput {
+    margin: 0.4vh 0;
+    padding: 0.7vh;
+    width: 24vw;
+    max-width: 220px;
+    text-align:center;
+    font-size:3.2vw;
+    background:#1f1f1f;
+    color:#fff;
+    border:2px solid #007bff;
+    border-radius:12px;
+    box-shadow:0 3px 5px rgba(0,0,0,0.3);
+    font-weight:bold;
+  }
+
+  /* حقول النقاط كما هي */
+  input.pointInput {
+    margin: 0.4vh 0;
+    padding: 0.7vh;
+    width: 34vw;
+    max-width: 300px;
+    text-align:center;
+    font-size:3.2vw;
+    background:#1f1f1f;
+    color:#fff;
+    border:2px solid #007bff;
+    border-radius:12px;
+    box-shadow:0 3px 5px rgba(0,0,0,0.3);
+    font-weight:bold;
+  }
+  input:focus { outline: none; }
+
+  #calcBtn {
+    margin-top: 2.5vh;
+    padding: 2vh 7vw;
+    font-size: 5.5vw;
+    cursor: pointer;
+    background: linear-gradient(135deg,#28a745,#85e085);
+    color:#fff;
+    border:none;
+    border-radius:25px;
+    box-shadow:0 7px 14px rgba(0,0,0,0.5);
+  }
+
+  #undoBtn {
+    position:absolute;
+    top: 1vh;
+    left: 1vw;
+    padding: 0.6vh 1.2vw;
+    font-size: 4vw;
+    cursor:pointer;
+    color:#fff;
+    background:none;
+    border:none;
+  }
+
+  #rankingList {
+    position:absolute;
+    top: 1vh;
+    right: 1vw;
+    text-align:right;
+    font-size:3.5vw;
+    background: rgba(0,0,0,0.5);
+    padding: 1vh 1.2vw;
+    border-radius:10px;
+    max-width: 40vw;
+    line-height:1.4;
+  }
+
+  .error { color:#ff5252; font-size:3vw; margin-top:0.8vh; }
+
+  /* التاج: عنصر ثابت في المستند ويتم تحريكه عبر JS */
+  #crown {
+    position: absolute;
+    width: 70px;            /* حجم التاج */
+    height: 70px;
+    pointer-events: none;
+    transform: translate(-50%, -100%); /* يثبت مركزه فوق منتصف الدائرة ويعلوها */
+    transition: left 300ms cubic-bezier(.2,.9,.3,1), top 300ms cubic-bezier(.2,.9,.3,1), opacity 200ms;
+    z-index: 9999;
+    opacity: 0;
+  }
+
+  /* شكل احترافي خفيف للتاج (في حال المتصفحات لا تعرض SVG بشكل مثالي) */
+  #crown svg {
+    width: 100%;
+    height: 100%;
+    display:block;
+  }
+
+  /* جعل النصوص أصغر قليلاً على شاشات واسعة */
+  @media(min-width:800px){
+    h2 { font-size: 26px; }
+    .circle { font-size: 28px; }
+    .info { font-size: 16px; top: 250px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <button id="undoBtn">↪️</button>
+    <h2>حاسبة مداقش 🔥</h2>
+
+    <div id="rankingList"></div>
+
+    <div class="top-box">
+      <input type="text" id="maxBid" placeholder="أعلى سومه" inputmode="decimal" pattern="[0-9.]*">
+      <div class="info" id="remaining"></div>
+    </div>
+
+    <div class="container">
+      <div class="player" data-idx="1">
+        <input type="text" class="nameInput" id="name1" placeholder="اسم اللاعب 1">
+        <div class="circle" id="score1">0</div>
+        <input type="text" class="pointInput" id="input1" placeholder="إضافة نقاط" inputmode="decimal" pattern="[0-9.]*">
+      </div>
+
+      <div class="player" data-idx="2">
+        <input type="text" class="nameInput" id="name2" placeholder="اسم اللاعب 2">
+        <div class="circle" id="score2">0</div>
+        <input type="text" class="pointInput" id="input2" placeholder="إضافة نقاط" inputmode="decimal" pattern="[0-9.]*">
+      </div>
+
+      <div class="player" data-idx="3">
+        <input type="text" class="nameInput" id="name3" placeholder="اسم اللاعب 3">
+        <div class="circle" id="score3">0</div>
+        <input type="text" class="pointInput" id="input3" placeholder="إضافة نقاط" inputmode="decimal" pattern="[0-9.]*">
+      </div>
+
+      <div class="player" data-idx="4">
+        <input type="text" class="nameInput" id="name4" placeholder="اسم اللاعب 4">
+        <div class="circle" id="score4">0</div>
+        <input type="text" class="pointInput" id="input4" placeholder="إضافة نقاط" inputmode="decimal" pattern="[0-9.]*">
+      </div>
+    </div>
+
+    <button id="calcBtn">احسب</button>
+    <div class="error" id="errorMsg"></div>
+  </div>
+
+  <!-- تاج SVG مدمج (خلفية شفافة، شكل ذهبي واقعي بسيط) -->
+  <div id="crown" aria-hidden="true">
+    <!-- SVG تاج ذهبي -->
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
+      <defs>
+        <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stop-color="#ffd84d"/>
+          <stop offset="0.5" stop-color="#ffb84d"/>
+          <stop offset="1" stop-color="#ffde7a"/>
+        </linearGradient>
+        <filter id="s" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.45"/>
+        </filter>
+      </defs>
+
+      <g filter="url(#s)">
+        <path d="M6 46 L58 46 L50 20 L40 34 L32 18 L24 34 L14 20 Z" fill="url(#g1)" stroke="#c98f1a" stroke-width="1"/>
+        <circle cx="12" cy="18" r="3.2" fill="#fff4cc" opacity="0.9"/>
+        <circle cx="32" cy="14" r="3.6" fill="#fff6d1" opacity="0.95"/>
+        <circle cx="52" cy="18" r="3.2" fill="#fff4cc" opacity="0.9"/>
+        <!-- لمسات لمعان -->
+        <path d="M18 28 C22 24 30 22 36 24" stroke="#fff7d2" stroke-opacity="0.5" stroke-width="1.2" fill="none"/>
+      </g>
+    </svg>
+  </div>
+
+<script>
+  // ======== منطق النقاط والـ crown المتحرك ========
+  let totals = [0,0,0,0];
+  let history = [];
+
+  function toEnglishDigits(str) {
+    return String(str || '').replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+  }
+
+  function updateRemaining() {
+    let maxVal = parseInt(toEnglishDigits(document.getElementById("maxBid").value)) || 0;
+    let roundSum = 0;
+    for (let i=1;i<=4;i++){
+      let raw = document.getElementById("input"+i).value.trim();
+      if (raw.startsWith(".")) continue;
+      let val = toEnglishDigits(raw);
+      let add = parseInt(val) || 0;
+      roundSum += add;
+    }
+    if (maxVal>0) {
+      document.getElementById("remaining").innerText = "المتبقي: " + (maxVal - roundSum);
+    } else {
+      document.getElementById("remaining").innerText = "";
+    }
+  }
+
+  function updateRankingList() {
+    let players = [
+      {idx:1, score:totals[0], name: document.getElementById("name1").value || "اللاعب 1"},
+      {idx:2, score:totals[1], name: document.getElementById("name2").value || "اللاعب 2"},
+      {idx:3, score:totals[2], name: document.getElementById("name3").value || "اللاعب 3"},
+      {idx:4, score:totals[3], name: document.getElementById("name4").value || "اللاعب 4"}
+    ];
+    players.sort((a,b)=>b.score - a.score);
+    const listDiv = document.getElementById("rankingList");
+    listDiv.innerHTML = "";
+    players.forEach((p,rank)=>{
+      listDiv.innerHTML += (rank+1) + ". " + p.name + " (" + p.score + ")<br>";
+    });
+
+    // حدد المتصدر (الأول في القائمة بعد الفرز) وانقل التاج إليه
+    if (players.length > 0) {
+      const leaderIdx = players[0].idx; // رقم اللاعب (1..4)
+      moveCrownTo(leaderIdx);
+
+      // إزالة الحدود الذهبية عن الكل
+      document.querySelectorAll(".circle").forEach(c=>{
+        c.style.border = "0.5vw solid #ffffff";
+        c.style.boxShadow = "none";
+      });
+
+      // إضافة اللون الذهبي للمتصدر
+      const leaderCircle = document.getElementById("score"+leaderIdx);
+      leaderCircle.style.border = "0.5vw solid gold";
+      leaderCircle.style.boxShadow = "0 0 15px gold";
+    }
+  }
+
+  // نقل التاج إلى منتصف دائرة اللاعب رقم idx
+  function moveCrownTo(idx) {
+    const crown = document.getElementById("crown");
+    const target = document.getElementById("score"+idx);
+    if (!target) {
+      crown.style.opacity = 0;
+      return;
+    }
+    const rect = target.getBoundingClientRect();
+    // نضع التاج بحيث يكون مركزه فوق منتصف الدائرة
+    const centerX = rect.left + rect.width/2 + window.scrollX;
+    const topY = rect.top + window.scrollY; // أعلى الدائرة
+    // إزاحة صغيرة للأعلى ليكون التاج فوق الحافة
+    const crownOffsetY = -60; // يمكن تعديل لو تحتاجه
+    crown.style.left = centerX + 'px';
+    crown.style.top = (topY - crownOffsetY) + 'px';
+    crown.style.opacity = 1;
+  }
+
+  // منع الصفحة من التحرك عند التركيز
+  document.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('focus', e=>{
+      window.scrollTo(0,0);
+    });
+    inp.addEventListener('touchstart', e=>{
+      window.scrollTo(0,0);
+    });
+  });
+
+  // ارتباط الحقول بالأحداث
+  document.querySelectorAll(".pointInput").forEach(inp=>{
+    inp.addEventListener("input", updateRemaining);
+  });
+
+  // زر الاحسب
+  document.getElementById("calcBtn").addEventListener("click", function(){
+    let maxVal = parseInt(toEnglishDigits(document.getElementById("maxBid").value)) || 0;
+    let roundSum = 0;
+    let roundValues = [];
+    for (let i=1;i<=4;i++){
+      let raw = document.getElementById("input"+i).value.trim();
+      if (raw.startsWith(".")) {
+        let num = parseInt(toEnglishDigits(raw.substring(1))) || 0;
+        roundValues.push(-num);
+      } else {
+        let val = toEnglishDigits(raw);
+        let add = parseInt(val) || 0;
+        roundValues.push(add);
+        roundSum += add;
+      }
+    }
+    if (maxVal>0 && roundSum>maxVal) {
+      document.getElementById("errorMsg").innerText = "❌ المجموع أكبر من أعلى سومه ("+maxVal+")";
+      return;
+    } else {
+      document.getElementById("errorMsg").innerText = "";
+    }
+
+    history.push([...roundValues]); // سجل تاريخ الجولة
+    for (let i=1;i<=4;i++){
+      totals[i-1] += roundValues[i-1];
+      document.getElementById("score"+i).innerText = totals[i-1];
+      document.getElementById("input"+i).value = "";
+    }
+
+    // هذا السطر الجديد اللي يفرغ خانة السومه بعد الحساب
+    document.getElementById("maxBid").value = "";
+
+    if (maxVal>0) document.getElementById("remaining").innerText = "المتبقي: " + maxVal;
+    updateRankingList();
+  });
+
+  // زر الرجوع والضغط الطويل
+  const undoBtn = document.getElementById("undoBtn");
+  let undoTimer;
+  function resetAll() {
+    totals = [0,0,0,0];
+    history = [];
+    for (let i=1;i<=4;i++){
+      document.getElementById("score"+i).innerText = "0";
+      document.getElementById("input"+i).value = "";
+    }
+    document.getElementById("remaining").innerText = "";
+    document.getElementById("errorMsg").innerText = "";
+    // اخفاء التاج عند التفريغ
+    const crown = document.getElementById("crown");
+    crown.style.opacity = 0;
+    document.querySelectorAll(".circle").forEach(c=>{
+      c.style.border = "0.5vw solid #ffffff";
+      c.style.boxShadow = "none";
+    });
+    updateRankingList();
+  }
+  function startLongPress(){ undoTimer = setTimeout(resetAll, 1000); }
+  function cancelLongPress(){ clearTimeout(undoTimer); }
+
+  undoBtn.addEventListener("mousedown", startLongPress);
+  undoBtn.addEventListener("mouseup", cancelLongPress);
+  undoBtn.addEventListener("mouseleave", cancelLongPress);
+  undoBtn.addEventListener("touchstart", startLongPress);
+  undoBtn.addEventListener("touchend", cancelLongPress);
+
+  undoBtn.addEventListener("click", function(){
+    if (history.length === 0) return;
+    let last = history.pop();
+    for (let i=0;i<4;i++){
+      totals[i] -= last[i];
+      document.getElementById("score"+(i+1)).innerText = totals[i];
+    }
+    updateRankingList();
+  });
+
+  // تهيئة الواجهة أول ما تفتح الصفحة - يخلي التاج مخفي
+  window.addEventListener('load', function(){
+    document.getElementById("crown").style.opacity = 0;
+    updateRankingList();
+  });
+
+  // إعادة وضع التاج عندما يتغير حجم النافذة (لو تحول الجهاز أو اتجاه الشاشة)
+  window.addEventListener('resize', function(){
+    // أعد موضع التاج إلى المتصدر الحالي
+    // نأخذ أول لاعب في لائحة الترتيب بعد الفرز
+    // نعيد حساب الموضع بعد انتهاء إعادة التحجيم
+    setTimeout(updateRankingList, 120);
+  });
+</script>
+</body>
+</html>
